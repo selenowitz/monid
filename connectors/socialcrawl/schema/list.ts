@@ -6,10 +6,10 @@ import { z } from "zod";
  * Cross-field rules (label=mention needs brand, fit=goal needs goal)
  * cannot survive compilation and are endpoint notes.
  *
- * List pages document `dry_run=1` only. Discover documents `true` as
- * well, so that wider union stays on `zDryRun` and is not used here.
- * A boolean `true` would be sent as the string "true", which these
- * list contracts do not describe.
+ * List pages, LinkedIn profile, and YouTube transcript document
+ * `dry_run=1` only. Discover also documents `true`, so that wider
+ * union stays on `zDryRun`. A boolean `true` would be sent as the
+ * string "true", which the `=1` contracts do not describe.
  */
 export const zDryRun = z.union([z.literal(1), z.boolean()]).describe(
     "When 1 or true, return a cost preview and charge 0 credits.",

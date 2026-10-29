@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { zDryRun } from "../../../schema/list.ts";
 
 /**
  * GET /v1/youtube/video/transcript query — the parameter table on
@@ -30,5 +29,8 @@ export const zYoutubeVideoTranscriptQuery = z.object({
         "A question about the video. Returns data.moments of kind " +
             "answers_query. Does not add credits. Do not send with moments.",
     ).optional(),
-    dry_run: zDryRun.optional(),
+    dry_run: z.literal(1).describe(
+        "When 1, return a cost preview and charge 0 credits. The example " +
+            "request documents dry_run=1.",
+    ).optional(),
 }).strict();

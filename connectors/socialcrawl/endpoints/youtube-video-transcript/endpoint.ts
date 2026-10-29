@@ -46,7 +46,7 @@ export default defineEndpoint({
         },
         estimate: ({ data }) => {
             const dry = data.input.queryParams.dry_run;
-            if (dry === true || dry === 1) return { counts: {} };
+            if (dry === 1) return { counts: {} };
             return { counts: { CREDIT: 3 } };
         },
     },
