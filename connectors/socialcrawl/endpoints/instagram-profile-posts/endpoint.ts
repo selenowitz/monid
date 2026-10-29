@@ -61,7 +61,7 @@ export default defineEndpoint({
          *  settle lower, on credits_used. */
         estimate: ({ data }) => {
             const q = data.input.queryParams;
-            if (q.dry_run === true || q.dry_run === 1) return { counts: {} };
+            if (q.dry_run === 1) return { counts: {} };
             const include = typeof q.include === "string" ? q.include : "";
             let audio = false;
             let tags = false;
@@ -78,9 +78,13 @@ export default defineEndpoint({
             for (const part of label.split(",")) {
                 const token = part.trim();
                 if (
-                    token === "mention" || token === "quality" ||
-                    token === "ai_style" || token === "ai_written" ||
-                    token === "injection"
+                    token === "quality" || token === "ai_style" ||
+                    token === "ai_written" || token === "injection"
+                ) paid = true;
+                // mention is skipped, and not billed, unless brand is set.
+                if (
+                    token === "mention" && typeof q.brand === "string" &&
+                    q.brand !== ""
                 ) paid = true;
                 if (
                     token === "intent" && typeof q.offer === "string" &&

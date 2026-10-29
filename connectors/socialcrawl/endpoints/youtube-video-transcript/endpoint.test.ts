@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import {
     estimateEndpoint,
@@ -51,8 +51,13 @@ Deno.test("socialcrawl#v1/youtube/video/transcript cache hit: the documented sam
     );
 });
 
-Deno.test("socialcrawl#v1/youtube/video/transcript: the hold is 3", async () => {
+Deno.test("socialcrawl#v1/youtube/video/transcript: schema gate", async () => {
     const unit = await testSealedUnit(ID);
+    await assertRejects(
+        () => estimateEndpoint(unit, { queryParams: { url: "" } }),
+        Error,
+        "INVALID_INPUT",
+    );
     assertEquals(
         (await estimateEndpoint(unit, { queryParams: { url: URL_ } })).credits,
         { default: 3 },
@@ -96,6 +101,9 @@ Deno.test({
             false,
             JSON.stringify(result.output),
         );
-        assertEquals(typeof result.usage.credits.default, "number");
+        assertEquals(
+            typeof result.usage.credits.default,
+            result.usage.evidence.CREDIT === 0 ? "undefined" : "number",
+        );
     },
 });

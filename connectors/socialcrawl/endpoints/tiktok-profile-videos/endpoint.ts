@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { defineEndpoint, Unit, UsageModelKind } from "@shared/core";
 import { zTiktokProfileVideosQuery } from "./schema/inputs.ts";
 
@@ -27,8 +28,8 @@ export default defineEndpoint({
             "1 credit per page. A paid label (mention, quality, " +
             "ai_style, ai_written, injection, or intent with offer) " +
             "holds 4 extra credits and refunds what was not newly judged.",
-            "Send handle or user_id. A call with neither is a free 400. " +
-            "The schema cannot require one of two fields.",
+            "Send handle or user_id. The schema requires at least one of " +
+            "them. A call with neither is rejected before the vendor.",
             "label=mention does nothing, and is not billed, unless brand " +
             "is set. fit=goal does nothing unless goal is set.",
             "Send pagination.next_cursor back as cursor. max_cursor is a " +
@@ -36,7 +37,17 @@ export default defineEndpoint({
         ],
     },
     request: { method: "GET", path: "/v1/tiktok/profile/videos" },
-    input: { schema: { queryParams: zTiktokProfileVideosQuery } },
+    // "at least one of handle or user_id" — anyOf of required arms, so a
+    // call that sends both still matches (clay D13). A `.refine` would
+    // compile away.
+    input: {
+        schema: {
+            queryParams: z.union([
+                zTiktokProfileVideosQuery.required({ handle: true }),
+                zTiktokProfileVideosQuery.required({ user_id: true }),
+            ]).describe("Provide a handle or a user_id."),
+        },
+    },
     timeouts: { requestMs: 120_000, runMs: 130_000 },
     usage: {
         model: {
@@ -49,15 +60,19 @@ export default defineEndpoint({
         },
         estimate: ({ data }) => {
             const q = data.input.queryParams;
-            if (q.dry_run === true || q.dry_run === 1) return { counts: {} };
+            if (q.dry_run === 1) return { counts: {} };
             const label = typeof q.label === "string" ? q.label : "";
             let paid = false;
             for (const part of label.split(",")) {
                 const token = part.trim();
                 if (
-                    token === "mention" || token === "quality" ||
-                    token === "ai_style" || token === "ai_written" ||
-                    token === "injection"
+                    token === "quality" || token === "ai_style" ||
+                    token === "ai_written" || token === "injection"
+                ) paid = true;
+                // mention is skipped, and not billed, unless brand is set.
+                if (
+                    token === "mention" && typeof q.brand === "string" &&
+                    q.brand !== ""
                 ) paid = true;
                 if (
                     token === "intent" && typeof q.offer === "string" &&

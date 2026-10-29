@@ -22,7 +22,9 @@ export default defineEndpoint({
         categories: ["linkedin", "people-enrichment"],
         notes: [
             "5 credits. A cache hit is 0.",
-            "verified is null: the source does not expose it. Experience, " +
+            "verified is nullable. The reference text says the source " +
+            "does not expose it, and the published example still returns " +
+            "true, so do not discard a value that arrives. Experience, " +
             "education, and skills are separate endpoints at 5 credits each.",
         ],
     },

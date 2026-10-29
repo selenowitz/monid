@@ -7,8 +7,9 @@ import { zDryRun } from "../../../schema/list.ts";
  * callers to add. Strict: this lane takes nothing else.
  */
 export const zLinkedinProfileQuery = z.object({
-    url: z.string().min(1).describe(
-        "Full URL of the LinkedIn profile page.",
+    url: z.string().regex(/^https?:\/\/\S+$/).describe(
+        "Full URL of the LinkedIn profile page. Any host the vendor " +
+            "accepts; the schema only requires a URL with a scheme.",
     ),
     dry_run: zDryRun.optional(),
 }).strict();

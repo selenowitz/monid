@@ -29,6 +29,7 @@ Deno.test("socialcrawl#v1/instagram/profile/posts happy: credits_used settles, b
     assertEquals("credits_used" in output, false);
     assertEquals("credits_remaining" in output, false);
     const data = output.data as { items: { post: { id: string } }[] };
+    assertEquals(data.items.length, 1);
     assertEquals(data.items[0].post.id, "3998430248382584993");
     assertEquals(
         (output.pagination as { has_more: boolean }).has_more,
@@ -92,19 +93,62 @@ Deno.test("socialcrawl#v1/instagram/profile/posts: the estimate is the page ceil
         })).credits,
         {},
     );
+    // mention is not billed unless brand is set. quality is billed alone.
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: { handle: "instagram", label: "mention" },
+        })).credits,
+        { default: 1 },
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: {
+                handle: "instagram",
+                label: "mention",
+                brand: "Buldak",
+            },
+        })).credits,
+        { default: 5 },
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: { handle: "instagram", since: "2026-09-01" },
+        })).credits,
+        { default: 1 },
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: {
+                handle: "instagram",
+                until: "2026-10-01T15:59:45.000Z",
+            },
+        })).credits,
+        { default: 1 },
+    );
 });
 
-Deno.test("socialcrawl#v1/instagram/profile/posts: an empty handle is rejected", async () => {
+Deno.test("socialcrawl#v1/instagram/profile/posts: schema gate", async () => {
     const unit = await testSealedUnit(ID);
     await assertRejects(
         () =>
-            runEndpoint({
-                unit,
-                input: { queryParams: { handle: "" } },
-                mode: "replay",
+            estimateEndpoint(unit, {
+                queryParams: { handle: "" },
             }),
         Error,
         "INVALID_INPUT",
+    );
+    await assertRejects(
+        () =>
+            estimateEndpoint(unit, {
+                queryParams: { handle: "instagram", since: "yesterday" },
+            }),
+        Error,
+        "INVALID_INPUT",
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, { queryParams: { handle: "instagram" } }))
+            .credits,
+        { default: 1 },
     );
 });
 
@@ -143,7 +187,12 @@ Deno.test({
             false,
             JSON.stringify(result.output),
         );
-        assertEquals(typeof result.usage.credits.default, "number");
+        // A cache hit reports credits_used 0. That claim is pruned, so
+        // credits.default is absent and the evidence count is 0.
+        assertEquals(
+            typeof result.usage.credits.default,
+            result.usage.evidence.CREDIT === 0 ? "undefined" : "number",
+        );
         assertEquals(
             "credits_used" in (result.output as Record<string, unknown>),
             false,

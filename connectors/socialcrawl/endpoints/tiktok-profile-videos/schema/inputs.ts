@@ -5,8 +5,8 @@ import { zListFilters } from "../../../schema/list.ts";
  * GET /v1/tiktok/profile/videos query — the parameter table on
  * https://www.socialcrawl.dev/platforms/tiktok/profile-videos plus
  * `cursor`. Not strict, for the same reason as the Instagram list.
- * Send handle or user_id; neither is required by itself (a call with
- * neither is a vendor 400 — a cross-field rule, so it lives in notes).
+ * The endpoint requires handle or user_id (a union of required arms, so
+ * a call with neither is INVALID_INPUT). Sending both is allowed.
  */
 export const zTiktokProfileVideosQuery = z.object({
     handle: z.string().min(1).describe(

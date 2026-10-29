@@ -6,20 +6,28 @@ import { z } from "zod";
  * Cross-field rules (label=mention needs brand, fit=goal needs goal)
  * cannot survive compilation and are endpoint notes.
  *
- * `dry_run` is documented as `1` on the list pages and as `true` on
- * Discover. Both are accepted; the engine sends them as `1` or `true`.
+ * List pages document `dry_run=1` only. Discover documents `true` as
+ * well, so that wider union stays on `zDryRun` and is not used here.
+ * A boolean `true` would be sent as the string "true", which these
+ * list contracts do not describe.
  */
 export const zDryRun = z.union([z.literal(1), z.boolean()]).describe(
     "When 1 or true, return a cost preview and charge 0 credits.",
 );
 
+/** YYYY-MM-DD, or an ISO 8601 timestamp with a timezone offset. */
+const zListInstant = z.union([
+    z.iso.date(),
+    z.iso.datetime({ offset: true }),
+]);
+
 export const zListFilters = {
-    since: z.string().min(1).describe(
+    since: zListInstant.describe(
         "Only rows published on or after this instant: YYYY-MM-DD " +
             "(midnight UTC) or an ISO 8601 timestamp. The page that " +
             "reaches an older row ends the walk. Pinned rows do not.",
     ).optional(),
-    until: z.string().min(1).describe(
+    until: zListInstant.describe(
         "Only rows published on or before this instant: YYYY-MM-DD (that " +
             "whole UTC day) or an ISO 8601 timestamp. The walk does not stop.",
     ).optional(),
@@ -66,7 +74,9 @@ export const zListFilters = {
         "on (default) adds the free sponsored, intent, and niche labels. " +
             "off, like label=none, returns the page without them.",
     ).optional(),
-    dry_run: zDryRun.optional(),
+    dry_run: z.literal(1).describe(
+        "When 1, return a cost preview and charge 0 credits.",
+    ).optional(),
     label_evidence: z.union([z.literal(1), z.boolean()]).describe(
         "When 1 or true, and label is set, each labelled row also carries " +
             "computed.labels_evidence.",

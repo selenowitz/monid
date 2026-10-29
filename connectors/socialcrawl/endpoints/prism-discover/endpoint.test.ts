@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import {
     estimateEndpoint,
@@ -42,6 +42,7 @@ Deno.test("socialcrawl#v1/prism/discover happy: the documented 8-credit run sett
         items: { id: string }[];
         run: { status: string; credits: { spent: number } };
     };
+    assertEquals(data.items.length, 1);
     assertEquals(data.items[0].id, "nw_akd38616exek");
     assertEquals(data.run.status, "completed");
     assertEquals(data.run.credits.spent, 8);
@@ -64,6 +65,32 @@ Deno.test("socialcrawl#v1/prism/discover: the hold is max_credits, default 50", 
             queryParams: { ...firstCall, dry_run: true },
         })).credits,
         {},
+    );
+});
+
+Deno.test("socialcrawl#v1/prism/discover: schema gate", async () => {
+    const unit = await testSealedUnit(ID);
+    await assertRejects(
+        () =>
+            estimateEndpoint(unit, {
+                queryParams: { ...firstCall, max_credits: 0 },
+            }),
+        Error,
+        "INVALID_INPUT",
+    );
+    await assertRejects(
+        () =>
+            estimateEndpoint(unit, {
+                queryParams: { ...firstCall, depth: "fast" },
+            }),
+        Error,
+        "INVALID_INPUT",
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: { ...firstCall, max_credits: 8 },
+        })).credits,
+        { default: 8 },
     );
 });
 

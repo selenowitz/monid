@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import {
     estimateEndpoint,
@@ -44,13 +44,58 @@ Deno.test("socialcrawl#v1/tiktok/profile/videos: a paid label raises the ceiling
         (await estimateEndpoint(unit, {
             queryParams: { handle: "charlidamelio", label: "mention" },
         })).credits,
+        { default: 1 },
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: {
+                handle: "charlidamelio",
+                label: "mention",
+                brand: "Buldak",
+            },
+        })).credits,
         { default: 5 },
     );
     assertEquals(
         (await estimateEndpoint(unit, {
-            queryParams: { handle: "charlidamelio", dry_run: true },
+            queryParams: { handle: "charlidamelio", label: "quality" },
+        })).credits,
+        { default: 5 },
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: { handle: "charlidamelio", dry_run: 1 },
         })).credits,
         {},
+    );
+});
+
+Deno.test("socialcrawl#v1/tiktok/profile/videos: schema gate", async () => {
+    const unit = await testSealedUnit(ID);
+    await assertRejects(
+        () => estimateEndpoint(unit, { queryParams: {} }),
+        Error,
+        "INVALID_INPUT",
+    );
+    await assertRejects(
+        () =>
+            estimateEndpoint(unit, {
+                queryParams: { handle: "charlidamelio", max_pages: 0 },
+            }),
+        Error,
+        "INVALID_INPUT",
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: { handle: "charlidamelio", max_pages: 1 },
+        })).credits,
+        { default: 1 },
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, {
+            queryParams: { user_id: "user_3182ec" },
+        })).credits,
+        { default: 1 },
     );
 });
 
@@ -89,6 +134,9 @@ Deno.test({
             false,
             JSON.stringify(result.output),
         );
-        assertEquals(typeof result.usage.credits.default, "number");
+        assertEquals(
+            typeof result.usage.credits.default,
+            result.usage.evidence.CREDIT === 0 ? "undefined" : "number",
+        );
     },
 });

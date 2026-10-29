@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import {
     estimateEndpoint,
@@ -36,6 +36,24 @@ Deno.test("socialcrawl#v1/linkedin/profile happy: 5 credits, profile rides throu
     const author = (output.data as { author: { display_name: string } })
         .author;
     assertEquals(author.display_name, "Bill Gates");
+});
+
+Deno.test("socialcrawl#v1/linkedin/profile: schema gate", async () => {
+    const unit = await testSealedUnit(ID);
+    await assertRejects(
+        () => estimateEndpoint(unit, { queryParams: { url: "" } }),
+        Error,
+        "INVALID_INPUT",
+    );
+    await assertRejects(
+        () => estimateEndpoint(unit, { queryParams: { url: "not-a-url" } }),
+        Error,
+        "INVALID_INPUT",
+    );
+    assertEquals(
+        (await estimateEndpoint(unit, { queryParams: { url: URL_ } })).credits,
+        { default: 5 },
+    );
 });
 
 Deno.test("socialcrawl#v1/linkedin/profile: the hold is 5, and a dry run is free", async () => {
@@ -82,6 +100,9 @@ Deno.test({
             false,
             JSON.stringify(result.output),
         );
-        assertEquals(typeof result.usage.credits.default, "number");
+        assertEquals(
+            typeof result.usage.credits.default,
+            result.usage.evidence.CREDIT === 0 ? "undefined" : "number",
+        );
     },
 });
